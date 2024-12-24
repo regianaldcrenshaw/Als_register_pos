@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cash Register POS</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .item-list, .order-summary {
+            width: 100%;
+            margin: 20px 0;
+        }
+        .item-list td, .order-summary td {
+            padding: 8px;
+            text-align: center;
+        }
+        .item-list input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            text-align: center;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .order-summary {
+            margin-top: 10px;
+        }
+        .order-summary th {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px;
+        }
+        .order-summary td {
+            text-align: right;
+        }
+        #orderCopyTextarea {
+            width: 100%;
+            height: 150px;
+            margin-top: 10px;
+        }
+        .discount {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Cash Register POS</h1>
+    
+    <table class="item-list">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Quantity</th>
+            </tr>
+        </thead>
+        <tbody id="itemListBody">
+            <!-- Items will be listed here -->
+        </tbody>
+    </table>
+
+    <div class="order-summary">
+        <h3>Order Summary</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="orderSummaryBody">
+                <!-- Order summary will appear here -->
+            </tbody>
+        </table>
+        <p><strong>Total: $<span id="totalAmount">0.00</span></strong></p>
+        <p class="discount">
+            <button class="btn" onclick="applyDiscount()">Apply 10% Discount</button>
+        </p>
+    </div>
+
+    <button class="btn" onclick="copyOrder()">Copy Order Sheet</button>
+    
+    <div class="order-summary">
+        <h3>Order Copy</h3>
+        <textarea id="orderCopyTextarea" readonly></textarea>
+    </div>
+
+    <div class="footer">
+        <button class="btn" onclick="clearOrder()">Clear Order</button>
+    </div>
+</div>
+
+<script>
+// Define the items for sale (32 items)
+const items = [
+    { name: "Item 1", price: 5.00 },
+    { name: "Item 2", price: 7.50 },
+    { name: "Item 3", price: 10.00 },
+    { name: "Item 4", price: 15.00 },
+    { name: "Item 5", price: 20.00 },
+    { name: "Item 6", price: 2.50 },
+    { name: "Item 7", price: 8.00 },
+    { name: "Item 8", price: 12.00 },
+    { name: "Item 9", price: 3.75 },
+    { name: "Item 10", price: 9.99 },
+    { name: "Item 11", price: 14.50 },
+    { name: "Item 12", price: 4.00 },
+    { name: "Item 13", price: 6.75 },
+    { name: "Item 14", price: 11.25 },
+    { name: "Item 15", price: 5.50 },
+    { name: "Item 16", price: 7.00 },
+    { name: "Item 17", price: 13.25 },
+    { name: "Item 18", price: 16.75 },
+    { name: "Item 19", price: 18.00 },
+    { name: "Item 20", price: 9.00 },
+    { name: "Item 21", price: 3.00 },
+    { name: "Item 22", price: 4.75 },
+    { name: "Item 23", price: 6.25 },
+    { name: "Item 24", price: 8.50 },
+    { name: "Item 25", price: 10.75 },
+    { name: "Item 26", price: 11.99 },
+    { name: "Item 27", price: 14.00 },
+    { name: "Item 28", price: 2.99 },
+    { name: "Item 29", price: 5.99 },
+    { name: "Item 30", price: 6.50 },
+    { name: "Item 31", price: 12.50 },
+    { name: "Item 32", price: 7.25 }
+];
+
+// Generate item list dynamically
+function generateItemList() {
+    const itemListBody = document.getElementById("itemListBody");
+    items.forEach((item, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${item.name}</td>
+            <td>$${item.price.toFixed(2)}</td>
+            <td><input type="number" id="quantity-${index}" value="0" min="0"></td>
+        `;
+        itemListBody.appendChild(row);
+    });
+}
+
+// Add item to the order
+let order = [];
+
+function addToOrder() {
+    order = [];
+    const orderSummaryBody = document.getElementById("orderSummaryBody");
+    const totalAmountElem = document.getElementById("totalAmount");
+
+    // Clear current order summary
+    orderSummaryBody.innerHTML = "";
+    let totalAmount = 0;
+
+    items.forEach((item, index) => {
+        const quantity = parseInt(document.getElementById(`quantity-${index}`).value);
+        if (quantity > 0) {
+            const itemTotal = item.price * quantity;
+            totalAmount += itemTotal;
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${item.name}</td>
+                <td>${quantity}</td>
+                <td>$${itemTotal.toFixed(2)}</td>
+            `;
+            orderSummaryBody.appendChild(row);
+            order.push({ item, quantity });
+        }
+    });
+
+    totalAmountElem.innerText = totalAmount.toFixed(2);
+}
+
+// Apply 10% discount
+function applyDiscount() {
+    const totalAmountElem = document.getElementById("totalAmount");
+    let totalAmount = parseFloat(totalAmountElem.innerText);
+    let discountedAmount = totalAmount * 0.9;  // Apply 10% discount
+    totalAmountElem.innerText = discountedAmount.toFixed(2);
+}
+
+// Copy order summary to textarea
+function copyOrder() {
+    let orderCopyText = "Order Summary:\n";
+    let totalAmount = 0;
+
+    order.forEach((orderItem) => {
+        const itemTotal = orderItem.item.price * orderItem.quantity;
+        totalAmount += itemTotal;
+        orderCopyText += `${orderItem.item.name} x${orderItem.quantity} - $${itemTotal.toFixed(2)}\n`;
+    });
+
+    orderCopyText += `\nTotal: $${totalAmount.toFixed(2)}\n`;
+
+    document.getElementById("orderCopyTextarea").value = orderCopyText;
+}
+
+// Clear the order
+function clearOrder() {
+    order = [];
+    document.getElementById("orderSummaryBody").innerHTML = "";
+    document.getElementById("totalAmount").innerText = "0.00";
+    document.getElementById("orderCopyTextarea").value = "";
+}
+
+// Generate item list on page load
+generateItemList();
+
+// Add event listeners to update order
+document.querySelectorAll('input[type="number"]').forEach(input => {
+    input.addEventListener('change', addToOrder);
+});
+</script>
+
+</body>
+</html>
